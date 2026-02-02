@@ -6,6 +6,12 @@ export const config = {
   port: process.env.PORT || 3000,
   apiUrl: process.env.API_URL || 'http://localhost:3000',
   apiKey: process.env.API_KEY,
+  cors: {
+    origins: (process.env.CORS_ORIGINS || 'http://localhost:8080')
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean)
+  },
   
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp-bot'

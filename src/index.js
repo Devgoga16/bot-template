@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config/config.js';
 import { swaggerSpec } from './config/swagger.js';
@@ -17,6 +18,17 @@ import statsRoutes from './routes/stats.routes.js';
 const app = express();
 
 // Middlewares globales
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || config.cors.origins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'x-api-key'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
