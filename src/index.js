@@ -19,13 +19,8 @@ const app = express();
 
 // Middlewares globales
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || config.cors.origins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
+  origin: '*',
+  credentials: false,
   allowedHeaders: ['Content-Type', 'x-api-key'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
