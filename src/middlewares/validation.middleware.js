@@ -23,7 +23,8 @@ export const validate = (schema) => {
 
 // Esquemas de validación
 export const sendWhatsappSchema = z.object({
-  to: z.string().min(10, 'Número de teléfono inválido'),
+  to: z.string()
+    .regex(/^9\d{8}$/, 'El número debe tener 9 dígitos y empezar con 9'),
   message: z.string().min(1, 'El mensaje no puede estar vacío').max(4096, 'El mensaje es demasiado largo')
 });
 

@@ -23,11 +23,14 @@ export const whatsappController = {
     try {
       const { to, message } = req.body;
       
+      // Agregar código de país 51 (Perú)
+      const phoneNumber = `51${to}`;
+      
       const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
       // Crear registro en base de datos
       const messageRecord = new WhatsappMessage({
-        to,
+        to: phoneNumber,
         message,
         billingMonth,
         status: 'pending'
@@ -35,19 +38,19 @@ export const whatsappController = {
 
       try {
         // Enviar mensaje
-        const result = await whatsappService.sendMessage(to, message);
+        const result = await whatsappService.sendMessage(phoneNumber, message);
         
         messageRecord.status = 'sent';
         messageRecord.sentAt = result.sentAt;
         await messageRecord.save();
 
-        console.log(`📤 WhatsApp enviado → ${to}`);
+        console.log(`📤 WhatsApp enviado → ${phoneNumber}`);
 
         res.json({
           success: true,
           message: 'Mensaje enviado correctamente',
           data: {
-            to,
+            to: phoneNumber,
             sentAt: result.sentAt
           }
         });
