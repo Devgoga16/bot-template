@@ -1,0 +1,33 @@
+{
+  "name": "whatsapp-email-bot",
+  "version": "1.0.0",
+  "description": "Sistema de bot para WhatsApp y envío de correos con facturación automática",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["whatsapp", "email", "bot", "billing"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "@hapi/boom": "^10.0.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "mongoose": "^8.0.3",
+    "nodemailer": "^6.9.7",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4",
+    "swagger-ui-express": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "qrcode": "^1.5.3",
+    "pino": "^8.17.2",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
