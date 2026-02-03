@@ -382,4 +382,68 @@ router.get('/invoice/base64/:billingId', statsController.getInvoicePDFBase64);
  */
 router.delete('/invoice/file/:billingId', statsController.deleteInvoiceFile);
 
+/**
+ * @swagger
+ * /stats/check-overdue:
+ *   post:
+ *     summary: Ejecutar manualmente la revisión de facturas vencidas
+ *     description: Revisa si hay facturas con pagos vencidos y bloquea la cuenta si es necesario. Útil para ejecutar el proceso fuera del horario programado del cron job.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Revisión ejecutada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasOverdue:
+ *                       type: boolean
+ *                       description: Indica si se encontraron facturas vencidas
+ *                     count:
+ *                       type: number
+ *                       description: Número de facturas vencidas
+ *                     invoices:
+ *                       type: array
+ *                       description: Lista de facturas vencidas (solo si hay)
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           month:
+ *                             type: string
+ *                           totalCost:
+ *                             type: number
+ *                           paymentDue:
+ *                             type: string
+ *                             format: date-time
+ *                           status:
+ *                             type: string
+ *             example:
+ *               success: true
+ *               message: "Se detectaron 1 factura(s) vencida(s). La cuenta ha sido bloqueada."
+ *               data:
+ *                 hasOverdue: true
+ *                 count: 1
+ *                 invoices:
+ *                   - id: "507f1f77bcf86cd799439011"
+ *                     month: "2026-01"
+ *                     totalCost: 150
+ *                     paymentDue: "2026-02-01T00:00:00.000Z"
+ *                     status: "overdue"
+ *       500:
+ *         description: Error al ejecutar la revisión
+ */
+router.post('/check-overdue', statsController.checkOverduePayments);
+
 export default router;

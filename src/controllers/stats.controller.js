@@ -406,5 +406,50 @@ export const statsController = {
         message: error.message
       });
     }
+  },
+
+  // Ejecutar manualmente verificación de facturas vencidas
+  async checkOverduePayments(req, res) {
+    try {
+      console.log('🔄 Ejecutando revisión manual de facturas vencidas...');
+      
+      const result = await billingService.checkOverduePayments();
+      
+      if (result.hasOverdue) {
+        console.log(`⚠️ ${result.count} factura(s) vencida(s) detectada(s)`);
+        return res.json({
+          success: true,
+          message: `Se detectaron ${result.count} factura(s) vencida(s). La cuenta ha sido bloqueada.`,
+          data: {
+            hasOverdue: true,
+            count: result.count,
+            invoices: result.invoices.map(inv => ({
+              id: inv._id,
+              month: inv.month,
+              totalCost: inv.totalCost,
+              paymentDue: inv.paymentDue,
+              status: inv.status
+            }))
+          }
+        });
+      } else {
+        console.log('✅ No hay pagos vencidos');
+        return res.json({
+          success: true,
+          message: 'No se encontraron facturas vencidas',
+          data: {
+            hasOverdue: false,
+            count: 0
+          }
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error verificando pagos vencidos:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error verificando pagos vencidos',
+        message: error.message
+      });
+    }
   }
 };
