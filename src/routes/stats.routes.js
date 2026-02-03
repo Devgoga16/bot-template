@@ -263,4 +263,44 @@ router.delete('/invoice/reverse/:month', statsController.reverseInvoice);
  */
 router.post('/invoice/upload', statsController.uploadInvoicePDF);
 
+/**
+ * @swagger
+ * /stats/invoice/file/{billingId}:
+ *   delete:
+ *     summary: Eliminar archivo PDF de factura
+ *     description: Elimina el archivo PDF asociado a una factura y resetea su estado a no subida. Útil para corregir errores antes de hacer el reverse de la factura.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: billingId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la facturación (MongoDB ObjectId)
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Archivo eliminado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 billing:
+ *                   type: object
+ *       400:
+ *         description: No se puede eliminar (factura pagada)
+ *       404:
+ *         description: Factura no encontrada
+ *       500:
+ *         description: Error eliminando archivo
+ */
+router.delete('/invoice/file/:billingId', statsController.deleteInvoiceFile);
+
 export default router;

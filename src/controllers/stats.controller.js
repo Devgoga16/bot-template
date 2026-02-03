@@ -323,5 +323,30 @@ export const statsController = {
         message: error.message
       });
     }
+  },
+
+  // Eliminar archivo PDF de factura
+  async deleteInvoiceFile(req, res) {
+    try {
+      const { billingId } = req.params;
+      
+      if (!billingId) {
+        return res.status(400).json({
+          success: false,
+          error: 'El ID de facturación es requerido'
+        });
+      }
+      
+      const result = await billingService.deleteInvoiceFile(billingId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error eliminando archivo de factura:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error eliminando archivo de factura',
+        message: error.message
+      });
+    }
   }
 };

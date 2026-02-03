@@ -333,6 +333,57 @@ class BillingService {
     };
   }
 
+  async deleteInvoiceFile(billingId) {
+    try {
+      const billing = await Billing.findById(billingId);
+      
+      if (!billing) {
+        throw new Error('No se encontró la factura');
+      }
+
+      if (billing.paymentReceived) {
+        throw new Error('No se puede eliminar el archivo de una factura que ya ha sido pagada');
+      }
+
+      // Eliminar archivo físico si existe
+      if (billing.invoiceFilePath) {
+        const fs = await import('fs');
+        
+        if (fs.existsSync(billing.invoiceFilePath)) {
+          fs.unlinkSync(billing.invoiceFilePath);
+          console.log('🗑️ Archivo PDF eliminado:', billing.invoiceFilePath);
+        }
+      }
+
+      // Actualizar registro - marcar como no subido
+      billing.invoiceUploaded = false;
+      billing.invoiceUploadedAt = null;
+      billing.invoiceFilePath = null;
+      billing.invoiceFileName = null;
+      billing.paymentDue = null;
+      
+      // Si estaba en estado invoiced, volver a draft
+      if (billing.status === 'invoiced') {
+        billing.status = 'draft';
+      }
+      
+      await billing.save();
+
+      return {
+        success: true,
+        message: 'Archivo de factura eliminado correctamente',
+        billing: {
+          id: billing._id,
+          month: billing.month,
+          status: billing.status
+        }
+      };
+    } catch (error) {
+      console.error('Error eliminando archivo de factura:', error);
+      throw error;
+    }
+  }
+
   async reverseInvoice(month) {
     try {
       const billing = await Billing.findOne({ month });
@@ -346,7 +397,7 @@ class BillingService {
       }
 
       if (billing.invoiceUploaded) {
-        throw new Error('No se puede revertir una factura que ya ha sido subida. Contacte al administrador.');
+        throw new Error('No se puede revertir una factura que ya ha sido subida. Elimine primero el archivo PDF.');
       }
 
       // Eliminar la factura
