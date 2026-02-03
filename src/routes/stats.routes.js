@@ -265,6 +265,50 @@ router.post('/invoice/upload', statsController.uploadInvoicePDF);
 
 /**
  * @swagger
+ * /stats/invoice/mark-paid:
+ *   post:
+ *     summary: Marcar factura como pagada y restaurar servicio
+ *     description: Registra el pago de una factura y desbloquea la cuenta automáticamente para restaurar el servicio.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - month
+ *             properties:
+ *               month:
+ *                 type: string
+ *                 description: Mes de la factura a marcar como pagada (formato YYYY-MM)
+ *                 example: "2026-01"
+ *     responses:
+ *       200:
+ *         description: Pago registrado y servicio restaurado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *             example:
+ *               success: true
+ *               message: "Pago registrado correctamente. Servicio restaurado."
+ *       400:
+ *         description: Datos inválidos o factura no encontrada
+ *       500:
+ *         description: Error registrando el pago
+ */
+router.post('/invoice/mark-paid', statsController.markPaymentReceived);
+
+/**
+ * @swagger
  * /stats/invoice/file/{billingId}:
  *   get:
  *     summary: Descargar/Previsualizar PDF de factura
@@ -445,5 +489,34 @@ router.delete('/invoice/file/:billingId', statsController.deleteInvoiceFile);
  *         description: Error al ejecutar la revisión
  */
 router.post('/check-overdue', statsController.checkOverduePayments);
+
+/**
+ * @swagger
+ * /stats/restore-service:
+ *   post:
+ *     summary: Restaurar servicio manualmente
+ *     description: Desbloquea la cuenta y reactiva todos los servicios. Útil para restaurar el servicio después de resolver problemas de pago o por decisión administrativa.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Servicio restaurado correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *             example:
+ *               success: true
+ *               message: "Servicio restaurado correctamente. La cuenta ha sido desbloqueada."
+ *       500:
+ *         description: Error al restaurar el servicio
+ */
+router.post('/restore-service', statsController.restoreService);
 
 export default router;

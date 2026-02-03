@@ -451,5 +451,60 @@ export const statsController = {
         message: error.message
       });
     }
+  },
+
+  // Marcar pago como recibido y restaurar servicio
+  async markPaymentReceived(req, res) {
+    try {
+      const { month } = req.body;
+      
+      if (!month) {
+        return res.status(400).json({
+          success: false,
+          error: 'El mes de la factura es requerido'
+        });
+      }
+      
+      console.log(`💰 Registrando pago para factura del mes ${month}...`);
+      
+      const result = await billingService.markPaymentReceived(month);
+      
+      console.log('✅ Pago registrado y servicio restaurado');
+      
+      res.json({
+        success: true,
+        message: 'Pago registrado correctamente. Servicio restaurado.'
+      });
+    } catch (error) {
+      console.error('❌ Error registrando pago:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error registrando el pago',
+        message: error.message
+      });
+    }
+  },
+
+  // Restaurar servicio manualmente
+  async restoreService(req, res) {
+    try {
+      console.log('🔓 Restaurando servicio manualmente...');
+      
+      await billingService.unblockAccount();
+      
+      console.log('✅ Servicio restaurado correctamente');
+      
+      res.json({
+        success: true,
+        message: 'Servicio restaurado correctamente. La cuenta ha sido desbloqueada.'
+      });
+    } catch (error) {
+      console.error('❌ Error restaurando servicio:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error al restaurar el servicio',
+        message: error.message
+      });
+    }
   }
 };
