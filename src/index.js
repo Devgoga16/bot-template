@@ -19,13 +19,14 @@ const app = express();
 
 // Middlewares globales
 app.use(cors({
-  origin: '*',
-  credentials: false,
-  allowedHeaders: ['Content-Type', 'x-api-key'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+  origin: true, // Permite cualquier origen y refleja el origen del request
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  exposedHeaders: ['Content-Length', 'x-api-key']
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // Aumentar límite para PDFs en base64
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Swagger documentation (sin autenticación)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

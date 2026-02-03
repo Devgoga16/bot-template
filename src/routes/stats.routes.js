@@ -154,4 +154,113 @@ router.get('/billing', statsController.getBillingHistory);
  */
 router.get('/month/:month', statsController.getMonthStats);
 
+/**
+ * @swagger
+ * /stats/invoice/generate:
+ *   post:
+ *     summary: Generar factura manualmente
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               month:
+ *                 type: string
+ *                 description: Mes a facturar (formato YYYY-MM). Si no se especifica, se genera para el mes anterior.
+ *                 example: "2026-01"
+ *     responses:
+ *       200:
+ *         description: Factura generada correctamente
+ *       400:
+ *         description: Factura ya existe o formato inválido
+ *       500:
+ *         description: Error generando factura
+ */
+router.post('/invoice/generate', statsController.generateInvoiceManual);
+
+/**
+ * @swagger
+ * /stats/invoice/reverse/{month}:
+ *   delete:
+ *     summary: Revertir/eliminar factura generada
+ *     description: Elimina una factura que no ha sido pagada ni subida. Útil para corregir errores en facturas generadas manualmente.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Mes de la factura a revertir (formato YYYY-MM)
+ *         example: "2026-01"
+ *     responses:
+ *       200:
+ *         description: Factura revertida correctamente
+ *       400:
+ *         description: No se puede revertir (factura pagada o subida)
+ *       404:
+ *         description: Factura no encontrada
+ *       500:
+ *         description: Error revirtiendo factura
+ */
+router.delete('/invoice/reverse/:month', statsController.reverseInvoice);
+
+/**
+ * @swagger
+ * /stats/invoice/upload:
+ *   post:
+ *     summary: Subir PDF de factura en base64
+ *     description: Sube el archivo PDF de una factura previamente generada. El archivo se guarda en el servidor y se actualiza el estado de la factura.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - billingId
+ *               - base64
+ *             properties:
+ *               billingId:
+ *                 type: string
+ *                 description: ID de la facturación (MongoDB ObjectId)
+ *                 example: "507f1f77bcf86cd799439011"
+ *               base64:
+ *                 type: string
+ *                 description: Contenido del PDF en base64 (con o sin prefijo data:application/pdf;base64,)
+ *                 example: "JVBERi0xLjQKJeLjz9MKMyAwIG9iaiA8PC9UeXBlIC9QYWdlL1..."
+ *               filename:
+ *                 type: string
+ *                 description: Nombre del archivo (opcional)
+ *                 example: "factura_enero_2026.pdf"
+ *     responses:
+ *       200:
+ *         description: PDF subido correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 billing:
+ *                   type: object
+ *       400:
+ *         description: Datos inválidos o faltantes
+ *       500:
+ *         description: Error subiendo PDF
+ */
+router.post('/invoice/upload', statsController.uploadInvoicePDF);
+
 export default router;

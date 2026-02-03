@@ -124,6 +124,65 @@ class BillingService {
     }
   }
 
+  async uploadInvoicePDF(billingId, base64Data, originalFilename = null) {
+    try {
+      const billing = await Billing.findById(billingId);
+      
+      if (!billing) {
+        throw new Error('No se encontró la factura');
+      }
+
+      if (!billing.invoiceGenerated) {
+        throw new Error('La factura debe estar generada antes de subir el archivo');
+      }
+
+      // Crear directorio de facturas si no existe
+      const fs = await import('fs');
+      const path = await import('path');
+      const invoicesDir = path.join(process.cwd(), 'invoices');
+      
+      if (!fs.existsSync(invoicesDir)) {
+        fs.mkdirSync(invoicesDir, { recursive: true });
+      }
+
+      // Generar nombre de archivo único
+      const timestamp = Date.now();
+      const fileName = originalFilename || `invoice_${billing.month}_${timestamp}.pdf`;
+      const filePath = path.join(invoicesDir, fileName);
+
+      // Decodificar base64 y guardar archivo
+      const base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
+      const buffer = Buffer.from(base64Clean, 'base64');
+      fs.writeFileSync(filePath, buffer);
+
+      // Actualizar registro de facturación
+      billing.invoiceUploaded = true;
+      billing.invoiceUploadedAt = new Date();
+      billing.invoiceFilePath = filePath;
+      billing.invoiceFileName = fileName;
+      
+      // Calcular fecha de vencimiento (3 días hábiles)
+      billing.paymentDue = this.addBusinessDays(new Date(), 3);
+      
+      await billing.save();
+
+      return {
+        success: true,
+        message: 'Factura PDF subida correctamente',
+        billing: {
+          id: billing._id,
+          month: billing.month,
+          fileName: billing.invoiceFileName,
+          uploadedAt: billing.invoiceUploadedAt,
+          paymentDue: billing.paymentDue
+        }
+      };
+    } catch (error) {
+      console.error('Error subiendo factura PDF:', error);
+      throw error;
+    }
+  }
+
   async markPaymentReceived(month) {
     try {
       const billing = await Billing.findOne({ month });
@@ -272,6 +331,46 @@ class BillingService {
         extra: Math.max(0, emailCount - config.billing.emailLimit)
       }
     };
+  }
+
+  async reverseInvoice(month) {
+    try {
+      const billing = await Billing.findOne({ month });
+      
+      if (!billing) {
+        throw new Error('No se encontró factura para este mes');
+      }
+
+      if (billing.paymentReceived) {
+        throw new Error('No se puede revertir una factura que ya ha sido pagada');
+      }
+
+      if (billing.invoiceUploaded) {
+        throw new Error('No se puede revertir una factura que ya ha sido subida. Contacte al administrador.');
+      }
+
+      // Eliminar la factura
+      await Billing.deleteOne({ _id: billing._id });
+
+      // Si la cuenta estaba bloqueada por esta factura, desbloquear
+      const hasOtherOverdue = await Billing.countDocuments({
+        status: 'overdue',
+        paymentReceived: false
+      });
+
+      if (hasOtherOverdue === 0) {
+        await this.unblockAccount();
+      }
+
+      return {
+        success: true,
+        message: 'Factura revertida correctamente',
+        deletedBilling: billing
+      };
+    } catch (error) {
+      console.error('Error revirtiendo factura:', error);
+      throw error;
+    }
   }
 
   addBusinessDays(date, days) {

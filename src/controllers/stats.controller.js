@@ -229,5 +229,99 @@ export const statsController = {
         error: 'Error obteniendo estadísticas'
       });
     }
+  },
+
+  // Generar factura manualmente
+  async generateInvoiceManual(req, res) {
+    try {
+      const { month } = req.body;
+      
+      if (month && !/^\d{4}-\d{2}$/.test(month)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Formato de mes inválido. Use YYYY-MM'
+        });
+      }
+      
+      const result = await billingService.generateMonthlyInvoice(month);
+      
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error generando factura manual:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error generando factura',
+        message: error.message
+      });
+    }
+  },
+
+  // Revertir factura
+  async reverseInvoice(req, res) {
+    try {
+      const { month } = req.params;
+      
+      if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Formato de mes inválido. Use YYYY-MM'
+        });
+      }
+      
+      const result = await billingService.reverseInvoice(month);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error revirtiendo factura:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error revirtiendo factura',
+        message: error.message
+      });
+    }
+  },
+
+  // Subir PDF de factura
+  async uploadInvoicePDF(req, res) {
+    try {
+      const { billingId, base64, filename } = req.body;
+      
+      if (!billingId) {
+        return res.status(400).json({
+          success: false,
+          error: 'El ID de facturación es requerido'
+        });
+      }
+
+      if (!base64) {
+        return res.status(400).json({
+          success: false,
+          error: 'El archivo en base64 es requerido'
+        });
+      }
+
+      // Validar que sea base64 válido
+      if (!base64.match(/^data:application\/pdf;base64,/) && !base64.match(/^[A-Za-z0-9+/=]+$/)) {
+        return res.status(400).json({
+          success: false,
+          error: 'El formato base64 no es válido'
+        });
+      }
+      
+      const result = await billingService.uploadInvoicePDF(billingId, base64, filename);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error subiendo factura PDF:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error subiendo factura PDF',
+        message: error.message
+      });
+    }
   }
 };
