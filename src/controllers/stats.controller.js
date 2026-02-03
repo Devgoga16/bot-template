@@ -325,6 +325,64 @@ export const statsController = {
     }
   },
 
+  // Obtener PDF de factura para descargar
+  async downloadInvoicePDF(req, res) {
+    try {
+      const { billingId } = req.params;
+      
+      if (!billingId) {
+        return res.status(400).json({
+          success: false,
+          error: 'El ID de facturación es requerido'
+        });
+      }
+      
+      const fileInfo = await billingService.getInvoiceFile(billingId);
+      
+      // Extraer base64 puro sin prefijo
+      const base64Data = fileInfo.base64.replace(/^data:application\/pdf;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      
+      // Enviar archivo para descarga o previsualización
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${fileInfo.fileName}"`);
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
+    } catch (error) {
+      console.error('Error descargando PDF de factura:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error obteniendo PDF de factura',
+        message: error.message
+      });
+    }
+  },
+
+  // Obtener PDF de factura en base64
+  async getInvoicePDFBase64(req, res) {
+    try {
+      const { billingId } = req.params;
+      
+      if (!billingId) {
+        return res.status(400).json({
+          success: false,
+          error: 'El ID de facturación es requerido'
+        });
+      }
+      
+      const result = await billingService.getInvoiceFileBase64(billingId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error obteniendo PDF en base64:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error obteniendo PDF en base64',
+        message: error.message
+      });
+    }
+  },
+
   // Eliminar archivo PDF de factura
   async deleteInvoiceFile(req, res) {
     try {

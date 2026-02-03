@@ -136,29 +136,20 @@ class BillingService {
         throw new Error('La factura debe estar generada antes de subir el archivo');
       }
 
-      // Crear directorio de facturas si no existe
-      const fs = await import('fs');
-      const path = await import('path');
-      const invoicesDir = path.join(process.cwd(), 'invoices');
+      // Limpiar base64 si viene con prefijo
+      let base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
       
-      if (!fs.existsSync(invoicesDir)) {
-        fs.mkdirSync(invoicesDir, { recursive: true });
-      }
+      // Asegurar que tenga el prefijo para almacenamiento
+      const base64WithPrefix = base64Clean.startsWith('data:') ? base64Clean : `data:application/pdf;base64,${base64Clean}`;
 
-      // Generar nombre de archivo único
+      // Generar nombre de archivo único si no se proporciona
       const timestamp = Date.now();
       const fileName = originalFilename || `invoice_${billing.month}_${timestamp}.pdf`;
-      const filePath = path.join(invoicesDir, fileName);
 
-      // Decodificar base64 y guardar archivo
-      const base64Clean = base64Data.replace(/^data:application\/pdf;base64,/, '');
-      const buffer = Buffer.from(base64Clean, 'base64');
-      fs.writeFileSync(filePath, buffer);
-
-      // Actualizar registro de facturación
+      // Guardar base64 directamente en la BD
       billing.invoiceUploaded = true;
       billing.invoiceUploadedAt = new Date();
-      billing.invoiceFilePath = filePath;
+      billing.invoiceFileBase64 = base64WithPrefix;
       billing.invoiceFileName = fileName;
       
       // Calcular fecha de vencimiento (3 días hábiles)
@@ -333,6 +324,56 @@ class BillingService {
     };
   }
 
+  async getInvoiceFile(billingId) {
+    try {
+      const billing = await Billing.findById(billingId);
+      
+      if (!billing) {
+        throw new Error('No se encontró la factura');
+      }
+
+      if (!billing.invoiceFileBase64 || !billing.invoiceUploaded) {
+        throw new Error('Esta factura no tiene un archivo PDF asociado');
+      }
+
+      return {
+        base64: billing.invoiceFileBase64,
+        fileName: billing.invoiceFileName,
+        month: billing.month
+      };
+    } catch (error) {
+      console.error('Error obteniendo archivo de factura:', error);
+      throw error;
+    }
+  }
+
+  async getInvoiceFileBase64(billingId) {
+    try {
+      const billing = await Billing.findById(billingId);
+      
+      if (!billing) {
+        throw new Error('No se encontró la factura');
+      }
+
+      if (!billing.invoiceFileBase64 || !billing.invoiceUploaded) {
+        throw new Error('Esta factura no tiene un archivo PDF asociado');
+      }
+
+      return {
+        success: true,
+        data: {
+          base64: billing.invoiceFileBase64,
+          fileName: billing.invoiceFileName,
+          month: billing.month,
+          uploadedAt: billing.invoiceUploadedAt
+        }
+      };
+    } catch (error) {
+      console.error('Error obteniendo archivo de factura en base64:', error);
+      throw error;
+    }
+  }
+
   async deleteInvoiceFile(billingId) {
     try {
       const billing = await Billing.findById(billingId);
@@ -345,20 +386,10 @@ class BillingService {
         throw new Error('No se puede eliminar el archivo de una factura que ya ha sido pagada');
       }
 
-      // Eliminar archivo físico si existe
-      if (billing.invoiceFilePath) {
-        const fs = await import('fs');
-        
-        if (fs.existsSync(billing.invoiceFilePath)) {
-          fs.unlinkSync(billing.invoiceFilePath);
-          console.log('🗑️ Archivo PDF eliminado:', billing.invoiceFilePath);
-        }
-      }
-
-      // Actualizar registro - marcar como no subido
+      // Limpiar datos del archivo
       billing.invoiceUploaded = false;
       billing.invoiceUploadedAt = null;
-      billing.invoiceFilePath = null;
+      billing.invoiceFileBase64 = null;
       billing.invoiceFileName = null;
       billing.paymentDue = null;
       
@@ -368,6 +399,8 @@ class BillingService {
       }
       
       await billing.save();
+
+      console.log('🗑️ Archivo PDF eliminado de BD');
 
       return {
         success: true,

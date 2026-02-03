@@ -266,6 +266,85 @@ router.post('/invoice/upload', statsController.uploadInvoicePDF);
 /**
  * @swagger
  * /stats/invoice/file/{billingId}:
+ *   get:
+ *     summary: Descargar/Previsualizar PDF de factura
+ *     description: Obtiene el archivo PDF de la factura para descarga o previsualización en el navegador.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: billingId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la facturación (MongoDB ObjectId)
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: PDF obtenido correctamente
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Factura o archivo no encontrado
+ *       500:
+ *         description: Error obteniendo archivo
+ */
+router.get('/invoice/file/:billingId', statsController.downloadInvoicePDF);
+
+/**
+ * @swagger
+ * /stats/invoice/base64/{billingId}:
+ *   get:
+ *     summary: Obtener PDF de factura en base64
+ *     description: Obtiene el archivo PDF de la factura codificado en base64 para previsualizarlo en el frontend.
+ *     tags: [Facturación]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: billingId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la facturación (MongoDB ObjectId)
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: PDF en base64 obtenido correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     base64:
+ *                       type: string
+ *                       description: PDF en formato base64 con prefijo data:application/pdf;base64,
+ *                     fileName:
+ *                       type: string
+ *                     month:
+ *                       type: string
+ *                     uploadedAt:
+ *                       type: string
+ *                       format: date-time
+ *       404:
+ *         description: Factura o archivo no encontrado
+ *       500:
+ *         description: Error obteniendo archivo
+ */
+router.get('/invoice/base64/:billingId', statsController.getInvoicePDFBase64);
+
+/**
+ * @swagger
+ * /stats/invoice/file/{billingId}:
  *   delete:
  *     summary: Eliminar archivo PDF de factura
  *     description: Elimina el archivo PDF asociado a una factura y resetea su estado a no subida. Útil para corregir errores antes de hacer el reverse de la factura.

@@ -48,7 +48,7 @@ const billingSchema = new mongoose.Schema({
     default: false
   },
   invoiceUploadedAt: Date,
-  invoiceFilePath: {
+  invoiceFileBase64: {
     type: String,
     default: null
   },
