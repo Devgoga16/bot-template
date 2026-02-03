@@ -107,6 +107,7 @@ class BillingService {
 
       billing.invoiceUploaded = true;
       billing.invoiceUploadedAt = new Date();
+      billing.status = 'invoiced';
       
       // Calcular fecha de vencimiento (3 días hábiles)
       billing.paymentDue = this.addBusinessDays(new Date(), 3);
@@ -151,6 +152,7 @@ class BillingService {
       billing.invoiceUploadedAt = new Date();
       billing.invoiceFileBase64 = base64WithPrefix;
       billing.invoiceFileName = fileName;
+      billing.status = 'invoiced';
       
       // Calcular fecha de vencimiento (3 días hábiles)
       billing.paymentDue = this.addBusinessDays(new Date(), 3);
