@@ -153,11 +153,24 @@ class WhatsAppService {
   }
 
   getStatus() {
-    return {
+    const status = {
       status: this.connectionStatus,
       qr: this.qr,
       connected: this.connectionStatus === 'connected'
     };
+
+    // Si está conectado, agregar información del teléfono
+    if (this.connectionStatus === 'connected' && this.sock && this.sock.user) {
+      const userId = this.sock.user.id; // Formato: "51966384230:1@s.whatsapp.net"
+      const phoneNumber = userId.split(':')[0]; // Extraer solo el número
+      
+      status.phone = {
+        number: phoneNumber,
+        name: this.sock.user.name || 'Sin nombre'
+      };
+    }
+
+    return status;
   }
 
   async sendMessage(to, message, retryCount = 0) {

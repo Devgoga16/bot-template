@@ -34,6 +34,16 @@ const router = express.Router();
  *                       description: QR code en formato base64 (solo cuando status es qr_ready)
  *                     connected:
  *                       type: boolean
+ *                     phone:
+ *                       type: object
+ *                       description: Información del teléfono logeado (solo cuando status es connected)
+ *                       properties:
+ *                         number:
+ *                           type: string
+ *                           description: Número de teléfono completo con código de país
+ *                         name:
+ *                           type: string
+ *                           description: Nombre del perfil de WhatsApp
  */
 router.get('/status', whatsappController.getStatus);
 
