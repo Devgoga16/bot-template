@@ -51,26 +51,68 @@ export const statsController = {
   // Historial de mensajes de WhatsApp
   async getWhatsappHistory(req, res) {
     try {
-      const { month, limit = 50, page = 1, status } = req.query;
+      const { month, limit = 50, page = 1, status, mediaType } = req.query;
       
       const query = {};
       if (month) query.billingMonth = month;
       if (status) query.status = status;
+      if (mediaType) query['mediaData.type'] = mediaType;
       
       const skip = (page - 1) * limit;
       
+      // Obtener mensajes sin el base64 completo (para no sobrecargar)
       const messages = await WhatsappMessage.find(query)
         .sort({ createdAt: -1 })
         .limit(parseInt(limit))
         .skip(skip)
-        .select('-__v');
+        .select('-__v -mediaData.base64Data')
+        .lean();
+      
+      // Agregar URL para ver la imagen si tiene mediaData
+      const messagesWithImageUrl = messages.map(msg => ({
+        ...msg,
+        imageUrl: msg.mediaData?.type === 'image' ? `/api/whatsapp/messages/${msg._id}/image` : null,
+        hasMedia: !!msg.mediaData?.type && msg.mediaData.type !== 'text'
+      }));
       
       const total = await WhatsappMessage.countDocuments(query);
+      
+      // Obtener estadísticas generales
+      const stats = await WhatsappMessage.aggregate([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            totalSent: { 
+              $sum: { $cond: [{ $eq: ['$status', 'sent'] }, 1, 0] } 
+            },
+            totalFailed: { 
+              $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } 
+            },
+            totalPending: { 
+              $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } 
+            },
+            totalWithImages: {
+              $sum: { $cond: [{ $eq: ['$mediaData.type', 'image'] }, 1, 0] }
+            },
+            totalTextOnly: {
+              $sum: { $cond: [{ $eq: ['$mediaData.type', 'text'] }, 1, 0] }
+            }
+          }
+        }
+      ]);
       
       res.json({
         success: true,
         data: {
-          messages,
+          messages: messagesWithImageUrl,
+          stats: stats[0] || {
+            totalSent: 0,
+            totalFailed: 0,
+            totalPending: 0,
+            totalWithImages: 0,
+            totalTextOnly: 0
+          },
           pagination: {
             total,
             page: parseInt(page),

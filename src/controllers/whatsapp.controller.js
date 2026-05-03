@@ -80,12 +80,30 @@ export const whatsappController = {
       
       const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
+      // Extraer información de la imagen (si viene en formato data:image/...;base64,...)
+      let mimeType = 'image/jpeg';
+      let base64Data = image;
+      
+      if (image.startsWith('data:')) {
+        const matches = image.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          mimeType = matches[1];
+          base64Data = matches[2];
+        }
+      }
+
       // Crear registro en base de datos
       const messageRecord = new WhatsappMessage({
         to: phoneNumber,
         message: caption || '[Imagen enviada]',
         billingMonth,
-        status: 'pending'
+        status: 'pending',
+        mediaData: {
+          type: 'image',
+          mimeType: mimeType,
+          base64Data: base64Data,
+          fileSize: Buffer.from(base64Data, 'base64').length
+        }
       });
 
       try {
@@ -149,17 +167,25 @@ export const whatsappController = {
       
       const billingMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
+      // Convertir buffer a base64
+      const base64Image = req.file.buffer.toString('base64');
+
       // Crear registro en base de datos
       const messageRecord = new WhatsappMessage({
         to: phoneNumber,
         message: caption || '[Imagen enviada]',
         billingMonth,
-        status: 'pending'
+        status: 'pending',
+        mediaData: {
+          type: 'image',
+          mimeType: req.file.mimetype,
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+          base64Data: base64Image
+        }
       });
 
       try {
-        // Convertir buffer a base64 para usar el método existente
-        const base64Image = req.file.buffer.toString('base64');
         const imageWithPrefix = `data:${req.file.mimetype};base64,${base64Image}`;
 
         // Enviar imagen usando el método existente
@@ -195,6 +221,119 @@ export const whatsappController = {
       res.status(500).json({
         success: false,
         error: 'Error enviando imagen de WhatsApp',
+        details: error.message
+      });
+    }
+  },
+
+  async getMessage(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const message = await WhatsappMessage.findById(id);
+      
+      if (!message) {
+        return res.status(404).json({
+          success: false,
+          error: 'Mensaje no encontrado'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: message
+      });
+    } catch (error) {
+      console.error('Error obteniendo mensaje:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error obteniendo mensaje',
+        details: error.message
+      });
+    }
+  },
+
+  async getMessageImage(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const message = await WhatsappMessage.findById(id);
+      
+      if (!message) {
+        return res.status(404).json({
+          success: false,
+          error: 'Mensaje no encontrado'
+        });
+      }
+
+      if (!message.mediaData || message.mediaData.type !== 'image' || !message.mediaData.base64Data) {
+        return res.status(404).json({
+          success: false,
+          error: 'Este mensaje no contiene una imagen'
+        });
+      }
+
+      // Convertir base64 a buffer
+      const imageBuffer = Buffer.from(message.mediaData.base64Data, 'base64');
+      
+      // Establecer el tipo de contenido apropiado
+      res.setHeader('Content-Type', message.mediaData.mimeType || 'image/jpeg');
+      res.setHeader('Content-Length', imageBuffer.length);
+      
+      // Si tiene nombre de archivo, sugerirlo para descarga
+      if (message.mediaData.fileName) {
+        res.setHeader('Content-Disposition', `inline; filename="${message.mediaData.fileName}"`);
+      }
+
+      res.send(imageBuffer);
+    } catch (error) {
+      console.error('Error obteniendo imagen:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error obteniendo imagen',
+        details: error.message
+      });
+    }
+  },
+
+  async listMessages(req, res) {
+    try {
+      const { page = 1, limit = 20, status, billingMonth, mediaType } = req.query;
+      
+      // Construir filtros
+      const filters = {};
+      if (status) filters.status = status;
+      if (billingMonth) filters.billingMonth = billingMonth;
+      if (mediaType) filters['mediaData.type'] = mediaType;
+
+      const skip = (page - 1) * limit;
+
+      const [messages, total] = await Promise.all([
+        WhatsappMessage.find(filters)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .select('-mediaData.base64Data'), // Excluir el base64 del listado para no enviar mucha data
+        WhatsappMessage.countDocuments(filters)
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          messages,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages: Math.ceil(total / limit)
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error listando mensajes:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error listando mensajes',
         details: error.message
       });
     }

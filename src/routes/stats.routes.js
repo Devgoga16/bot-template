@@ -44,7 +44,8 @@ router.get('/usage', statsController.getCurrentUsage);
  * @swagger
  * /stats/whatsapp:
  *   get:
- *     summary: Obtener historial de mensajes de WhatsApp
+ *     summary: Obtener historial de mensajes de WhatsApp con estadísticas
+ *     description: Lista todos los mensajes enviados con información detallada, incluyendo metadata de imágenes y estadísticas generales
  *     tags: [Estadísticas]
  *     security:
  *       - ApiKeyAuth: []
@@ -61,6 +62,12 @@ router.get('/usage', statsController.getCurrentUsage);
  *           enum: [pending, sent, failed, retry]
  *         description: Filtrar por estado
  *       - in: query
+ *         name: mediaType
+ *         schema:
+ *           type: string
+ *           enum: [text, image, document, video, audio]
+ *         description: Filtrar por tipo de medio
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
@@ -75,6 +82,74 @@ router.get('/usage', statsController.getCurrentUsage);
  *     responses:
  *       200:
  *         description: Historial obtenido correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     messages:
+ *                       type: array
+ *                       description: Lista de mensajes con metadata
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           to:
+ *                             type: string
+ *                           message:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           sentAt:
+ *                             type: string
+ *                             format: date-time
+ *                           mediaData:
+ *                             type: object
+ *                             properties:
+ *                               type:
+ *                                 type: string
+ *                               mimeType:
+ *                                 type: string
+ *                               fileName:
+ *                                 type: string
+ *                               fileSize:
+ *                                 type: number
+ *                           imageUrl:
+ *                             type: string
+ *                             description: URL para visualizar la imagen (si aplica)
+ *                           hasMedia:
+ *                             type: boolean
+ *                             description: Indica si el mensaje tiene contenido multimedia
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         totalSent:
+ *                           type: number
+ *                         totalFailed:
+ *                           type: number
+ *                         totalPending:
+ *                           type: number
+ *                         totalWithImages:
+ *                           type: number
+ *                         totalTextOnly:
+ *                           type: number
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                         page:
+ *                           type: number
+ *                         limit:
+ *                           type: number
+ *                         pages:
+ *                           type: number
  */
 router.get('/whatsapp', statsController.getWhatsappHistory);
 

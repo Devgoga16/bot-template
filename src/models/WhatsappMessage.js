@@ -23,6 +23,21 @@ const whatsappMessageSchema = new mongoose.Schema({
   billingMonth: {
     type: String,
     required: true // formato: "YYYY-MM"
+  },
+  // Información de medios enviados (imágenes, documentos, etc.)
+  mediaData: {
+    type: {
+      type: String,
+      enum: ['text', 'image', 'document', 'video', 'audio'],
+      default: 'text'
+    },
+    mimeType: String,
+    fileName: String,
+    fileSize: Number,
+    // Guardar la imagen/documento en base64 (para poder visualizarlo después)
+    base64Data: String,
+    // URL si la imagen viene de una URL externa
+    url: String
   }
 }, {
   timestamps: true

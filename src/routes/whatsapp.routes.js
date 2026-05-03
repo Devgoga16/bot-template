@@ -191,4 +191,110 @@ router.post('/send-image', accountStatusMiddleware, validate(sendImageWhatsappSc
  */
 router.post('/send-image-upload', accountStatusMiddleware, upload.single('image'), whatsappController.sendImageUpload);
 
+/**
+ * @swagger
+ * /whatsapp/messages:
+ *   get:
+ *     summary: Listar mensajes enviados
+ *     tags: [WhatsApp]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Mensajes por página
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, sent, failed, retry]
+ *         description: Filtrar por estado
+ *       - in: query
+ *         name: billingMonth
+ *         schema:
+ *           type: string
+ *         description: Filtrar por mes de facturación (formato YYYY-MM)
+ *       - in: query
+ *         name: mediaType
+ *         schema:
+ *           type: string
+ *           enum: [text, image, document, video, audio]
+ *         description: Filtrar por tipo de medio
+ *     responses:
+ *       200:
+ *         description: Lista de mensajes
+ *       500:
+ *         description: Error listando mensajes
+ */
+router.get('/messages', whatsappController.listMessages);
+
+/**
+ * @swagger
+ * /whatsapp/messages/{id}:
+ *   get:
+ *     summary: Obtener un mensaje específico
+ *     tags: [WhatsApp]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del mensaje
+ *     responses:
+ *       200:
+ *         description: Mensaje encontrado
+ *       404:
+ *         description: Mensaje no encontrado
+ *       500:
+ *         description: Error obteniendo mensaje
+ */
+router.get('/messages/:id', whatsappController.getMessage);
+
+/**
+ * @swagger
+ * /whatsapp/messages/{id}/image:
+ *   get:
+ *     summary: Obtener la imagen de un mensaje
+ *     description: Devuelve la imagen enviada en un mensaje. Puede visualizarse directamente en el navegador
+ *     tags: [WhatsApp]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del mensaje
+ *     responses:
+ *       200:
+ *         description: Imagen encontrada
+ *         content:
+ *           image/jpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           image/png:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Mensaje no encontrado o no contiene imagen
+ *       500:
+ *         description: Error obteniendo imagen
+ */
+router.get('/messages/:id/image', whatsappController.getMessageImage);
+
 export default router;
