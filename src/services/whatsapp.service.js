@@ -203,6 +203,62 @@ class WhatsAppService {
     }
   }
 
+  async sendImage(to, imageData, caption = '', retryCount = 0) {
+    const maxRetries = 3;
+    
+    if (this.connectionStatus !== 'connected' || !this.sock) {
+      throw new Error('WhatsApp no está conectado');
+    }
+
+    try {
+      // Formatear número para WhatsApp
+      const formattedNumber = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+      
+      let imageBuffer;
+      
+      // Detectar si es base64 o URL
+      if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+        // Es una URL - Baileys la descargará automáticamente
+        await this.sock.sendMessage(formattedNumber, {
+          image: { url: imageData },
+          caption: caption || undefined
+        });
+      } else if (imageData.startsWith('data:image')) {
+        // Es base64 con formato data:image/...;base64,
+        const base64Data = imageData.split(',')[1];
+        imageBuffer = Buffer.from(base64Data, 'base64');
+        
+        await this.sock.sendMessage(formattedNumber, {
+          image: imageBuffer,
+          caption: caption || undefined
+        });
+      } else {
+        // Asumir que es base64 puro sin prefijo
+        imageBuffer = Buffer.from(imageData, 'base64');
+        
+        await this.sock.sendMessage(formattedNumber, {
+          image: imageBuffer,
+          caption: caption || undefined
+        });
+      }
+      
+      return {
+        success: true,
+        sentAt: new Date()
+      };
+    } catch (error) {
+      console.error(`Error enviando imagen (intento ${retryCount + 1}/${maxRetries}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Esperar 2 segundos antes de reintentar
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return this.sendImage(to, imageData, caption, retryCount + 1);
+      }
+      
+      throw error;
+    }
+  }
+
   async disconnect() {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);

@@ -28,6 +28,13 @@ export const sendWhatsappSchema = z.object({
   message: z.string().min(1, 'El mensaje no puede estar vacío').max(4096, 'El mensaje es demasiado largo')
 });
 
+export const sendImageWhatsappSchema = z.object({
+  to: z.string()
+    .regex(/^9\d{8}$/, 'El número debe tener 9 dígitos y empezar con 9'),
+  image: z.string().min(1, 'La imagen no puede estar vacía'),
+  caption: z.string().max(1024, 'El caption es demasiado largo').optional()
+});
+
 export const sendEmailSchema = z.object({
   to: z.string().email('Email inválido'),
   subject: z.string().min(1, 'El asunto no puede estar vacío'),

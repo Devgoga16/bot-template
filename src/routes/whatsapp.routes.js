@@ -1,7 +1,8 @@
 import express from 'express';
 import { whatsappController } from '../controllers/whatsapp.controller.js';
-import { validate, sendWhatsappSchema } from '../middlewares/validation.middleware.js';
+import { validate, sendWhatsappSchema, sendImageWhatsappSchema } from '../middlewares/validation.middleware.js';
 import { accountStatusMiddleware } from '../middlewares/accountStatus.middleware.js';
+import { upload } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
 
@@ -82,5 +83,112 @@ router.get('/status', whatsappController.getStatus);
  *         description: Error enviando mensaje
  */
 router.post('/send', accountStatusMiddleware, validate(sendWhatsappSchema), whatsappController.sendMessage);
+
+/**
+ * @swagger
+ * /whatsapp/send-image:
+ *   post:
+ *     summary: Enviar imagen por WhatsApp
+ *     tags: [WhatsApp]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - to
+ *               - image
+ *             properties:
+ *               to:
+ *                 type: string
+ *                 description: Número de teléfono (con código de país, sin +)
+ *                 example: "573001234567"
+ *               image:
+ *                 type: string
+ *                 description: Imagen en base64 (con o sin prefijo data:image) o URL de la imagen
+ *                 example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+ *               caption:
+ *                 type: string
+ *                 description: Texto opcional que acompaña la imagen
+ *                 example: "Esta es una imagen de ejemplo"
+ *     responses:
+ *       200:
+ *         description: Imagen enviada correctamente
+ *       403:
+ *         description: Cuenta bloqueada
+ *       500:
+ *         description: Error enviando imagen
+ */
+router.post('/send-image', accountStatusMiddleware, validate(sendImageWhatsappSchema), whatsappController.sendImage);
+
+/**
+ * @swagger
+ * /whatsapp/send-image-upload:
+ *   post:
+ *     summary: Enviar imagen por WhatsApp mediante upload de archivo
+ *     tags: [WhatsApp]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - to
+ *               - image
+ *             properties:
+ *               to:
+ *                 type: string
+ *                 description: Número de teléfono (9 dígitos, sin código de país)
+ *                 example: "966384230"
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Archivo de imagen (jpg, png, gif, webp - máx 10MB)
+ *               caption:
+ *                 type: string
+ *                 description: Texto opcional que acompaña la imagen
+ *                 example: "Esta es una imagen de ejemplo"
+ *     responses:
+ *       200:
+ *         description: Imagen enviada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     to:
+ *                       type: string
+ *                     sentAt:
+ *                       type: string
+ *                       format: date-time
+ *                     hasCaption:
+ *                       type: boolean
+ *                     fileName:
+ *                       type: string
+ *                     fileSize:
+ *                       type: number
+ *                     mimeType:
+ *                       type: string
+ *       400:
+ *         description: Datos inválidos o archivo no proporcionado
+ *       403:
+ *         description: Cuenta bloqueada
+ *       500:
+ *         description: Error enviando imagen
+ */
+router.post('/send-image-upload', accountStatusMiddleware, upload.single('image'), whatsappController.sendImageUpload);
 
 export default router;
