@@ -1,6 +1,13 @@
 import express from 'express';
 import { whatsappController } from '../controllers/whatsapp.controller.js';
-import { validate, sendWhatsappSchema, sendImageWhatsappSchema } from '../middlewares/validation.middleware.js';
+import {
+  validate,
+  sendWhatsappSchema,
+  sendImageWhatsappSchema,
+  createGroupSchema,
+  addParticipantsSchema,
+  sendGroupMessageSchema
+} from '../middlewares/validation.middleware.js';
 import { accountStatusMiddleware } from '../middlewares/accountStatus.middleware.js';
 import { upload } from '../middlewares/upload.middleware.js';
 
@@ -296,5 +303,125 @@ router.get('/messages/:id', whatsappController.getMessage);
  *         description: Error obteniendo imagen
  */
 router.get('/messages/:id/image', whatsappController.getMessageImage);
+
+/**
+ * @swagger
+ * /whatsapp/groups:
+ *   post:
+ *     summary: Crear un grupo de WhatsApp
+ *     description: Crea un grupo nuevo. El bot (dueño) siempre queda incluido. Los participantes son opcionales.
+ *     tags: [WhatsApp Groups]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nombre del grupo
+ *                 example: "Mi grupo de prueba"
+ *               participants:
+ *                 type: array
+ *                 description: Números de teléfono (9 dígitos, sin código de país)
+ *                 items:
+ *                   type: string
+ *                 example: ["966384230"]
+ *     responses:
+ *       200:
+ *         description: Grupo creado correctamente, incluye toda la información guardada (groupId, etc.)
+ *       403:
+ *         description: Cuenta bloqueada
+ *       500:
+ *         description: Error creando el grupo
+ */
+router.post('/groups', accountStatusMiddleware, validate(createGroupSchema), whatsappController.createGroup);
+
+/**
+ * @swagger
+ * /whatsapp/groups/{groupId}/participants:
+ *   post:
+ *     summary: Agregar participantes a un grupo de WhatsApp
+ *     tags: [WhatsApp Groups]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del grupo (JID), devuelto al crear el grupo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - participants
+ *             properties:
+ *               participants:
+ *                 type: array
+ *                 description: Números de teléfono (9 dígitos, sin código de país)
+ *                 items:
+ *                   type: string
+ *                 example: ["966384230"]
+ *     responses:
+ *       200:
+ *         description: Participantes agregados correctamente
+ *       403:
+ *         description: Cuenta bloqueada
+ *       404:
+ *         description: Grupo no encontrado
+ *       500:
+ *         description: Error agregando participantes
+ */
+router.post('/groups/:groupId/participants', accountStatusMiddleware, validate(addParticipantsSchema), whatsappController.addGroupParticipants);
+
+/**
+ * @swagger
+ * /whatsapp/groups/{groupId}/send:
+ *   post:
+ *     summary: Enviar un mensaje a un grupo de WhatsApp
+ *     tags: [WhatsApp Groups]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del grupo (JID), devuelto al crear el grupo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *             properties:
+ *               message:
+ *                 type: string
+ *                 description: Mensaje a enviar
+ *                 example: "Hola a todos"
+ *     responses:
+ *       200:
+ *         description: Mensaje enviado correctamente
+ *       403:
+ *         description: Cuenta bloqueada
+ *       404:
+ *         description: Grupo no encontrado
+ *       500:
+ *         description: Error enviando el mensaje
+ */
+router.post('/groups/:groupId/send', accountStatusMiddleware, validate(sendGroupMessageSchema), whatsappController.sendGroupMessage);
 
 export default router;

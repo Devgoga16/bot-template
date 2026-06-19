@@ -259,6 +259,60 @@ class WhatsAppService {
     }
   }
 
+  async createGroup(name, participants = []) {
+    if (this.connectionStatus !== 'connected' || !this.sock) {
+      throw new Error('WhatsApp no está conectado');
+    }
+
+    const participantJids = participants.map(p => p.includes('@') ? p : `${p}@s.whatsapp.net`);
+
+    const group = await this.sock.groupCreate(name, participantJids);
+
+    return group;
+  }
+
+  async addGroupParticipants(groupId, participants = []) {
+    if (this.connectionStatus !== 'connected' || !this.sock) {
+      throw new Error('WhatsApp no está conectado');
+    }
+
+    const participantJids = participants.map(p => p.includes('@') ? p : `${p}@s.whatsapp.net`);
+
+    console.log('🔎 addGroupParticipants debug', { groupId, participantJids });
+
+    const result = await this.sock.groupParticipantsUpdate(groupId, participantJids, 'add');
+
+    console.log('🔎 addGroupParticipants result', JSON.stringify(result));
+
+    return result;
+  }
+
+  async sendGroupMessage(groupId, message, retryCount = 0) {
+    const maxRetries = 3;
+
+    if (this.connectionStatus !== 'connected' || !this.sock) {
+      throw new Error('WhatsApp no está conectado');
+    }
+
+    try {
+      await this.sock.sendMessage(groupId, { text: message });
+
+      return {
+        success: true,
+        sentAt: new Date()
+      };
+    } catch (error) {
+      console.error(`Error enviando mensaje a grupo (intento ${retryCount + 1}/${maxRetries}):`, error);
+
+      if (retryCount < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return this.sendGroupMessage(groupId, message, retryCount + 1);
+      }
+
+      throw error;
+    }
+  }
+
   async disconnect() {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);

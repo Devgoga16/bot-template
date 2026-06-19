@@ -1,5 +1,6 @@
 import { whatsappService } from '../services/whatsapp.service.js';
 import { WhatsappMessage } from '../models/WhatsappMessage.js';
+import { WhatsappGroup } from '../models/WhatsappGroup.js';
 
 export const whatsappController = {
   async getStatus(req, res) {
@@ -291,6 +292,131 @@ export const whatsappController = {
       res.status(500).json({
         success: false,
         error: 'Error obteniendo imagen',
+        details: error.message
+      });
+    }
+  },
+
+  async createGroup(req, res) {
+    try {
+      const { name, participants = [] } = req.body;
+
+      // Agregar código de país 51 (Perú)
+      const participantNumbers = participants.map(p => `51${p}`);
+
+      const status = whatsappService.getStatus();
+      const owner = status.phone ? `${status.phone.number}@s.whatsapp.net` : undefined;
+
+      const groupResult = await whatsappService.createGroup(name, participantNumbers);
+
+      const group = new WhatsappGroup({
+        groupId: groupResult.id,
+        name: groupResult.subject || name,
+        owner,
+        participants: (groupResult.participants || []).map(p => ({
+          jid: p.id,
+          isAdmin: p.admin === 'admin' || p.admin === 'superadmin'
+        }))
+      });
+
+      await group.save();
+
+      console.log(`👥 Grupo de WhatsApp creado → ${group.groupId}`);
+
+      res.json({
+        success: true,
+        message: 'Grupo creado correctamente',
+        data: group
+      });
+    } catch (error) {
+      console.error('Error creando grupo:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error creando grupo de WhatsApp',
+        details: error.message
+      });
+    }
+  },
+
+  async addGroupParticipants(req, res) {
+    try {
+      const { groupId } = req.params;
+      const { participants } = req.body;
+
+      const group = await WhatsappGroup.findOne({ groupId });
+
+      if (!group) {
+        return res.status(404).json({
+          success: false,
+          error: 'Grupo no encontrado'
+        });
+      }
+
+      // Agregar código de país 51 (Perú)
+      const participantNumbers = participants.map(p => `51${p}`);
+
+      const result = await whatsappService.addGroupParticipants(groupId, participantNumbers);
+
+      const addedJids = (result || [])
+        .filter(r => r.status === '200')
+        .map(r => r.jid);
+
+      for (const jid of addedJids) {
+        if (!group.participants.some(p => p.jid === jid)) {
+          group.participants.push({ jid, isAdmin: false });
+        }
+      }
+
+      await group.save();
+
+      console.log(`👥 Participantes agregados al grupo → ${groupId}`);
+
+      res.json({
+        success: true,
+        message: 'Participantes agregados correctamente',
+        data: group
+      });
+    } catch (error) {
+      console.error('Error agregando participantes:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error agregando participantes al grupo',
+        details: error.message
+      });
+    }
+  },
+
+  async sendGroupMessage(req, res) {
+    try {
+      const { groupId } = req.params;
+      const { message } = req.body;
+
+      const group = await WhatsappGroup.findOne({ groupId });
+
+      if (!group) {
+        return res.status(404).json({
+          success: false,
+          error: 'Grupo no encontrado'
+        });
+      }
+
+      const result = await whatsappService.sendGroupMessage(groupId, message);
+
+      console.log(`📤 Mensaje enviado al grupo → ${groupId}`);
+
+      res.json({
+        success: true,
+        message: 'Mensaje enviado correctamente',
+        data: {
+          groupId,
+          sentAt: result.sentAt
+        }
+      });
+    } catch (error) {
+      console.error('Error enviando mensaje al grupo:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Error enviando mensaje al grupo',
         details: error.message
       });
     }
